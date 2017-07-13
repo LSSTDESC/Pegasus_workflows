@@ -14,7 +14,7 @@ class JobMaker(object):
         args = [repo]
         args = self._add_dataId(args, dataId)
         args = self._add_options(args, options)
-        configfile = os.path.join(self.config_dir, '%s-config.py' % task_name))
+        configfile = os.path.join(self.config_dir, '%s-config.py' % task_name)
         args.extend(['--configfile', configfile])
         job.addArguments(*args)
         self.dax.addJob(job)
