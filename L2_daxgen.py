@@ -4,6 +4,7 @@ import glob
 import pwd
 import time
 from Pegasus.DAX3 import *
+from JobMaker import JobMaker
 
 def visit_list(repo):
     # This is a place-holder for now, to be replaced by DC2 visit list.
@@ -38,84 +39,68 @@ dax.metadata("created", time.ctime())
 
 input_repo = '/global/cscratch1/sd/descdm/DC1/DC1-imsim-dithered'
 output_repo = '.'
+config_dir = './configs'
 
-# Ingest the raw images.
-ingestImages = Job('ingestImages.py')
-file_names = glob.glob(os.path.join(input_repo, 'lsst_a_*.fits*'))
-ingestImages.addArguments(input_repo, '--output', output_repo, *file_names)
-dax.addJob(ingestImages)
-
-# Ingest the reference catalog.
-ref_cat = '/global/homes/d/descdm/dc1/DC1-imsim-dithered/dc1_reference_catalog.txt'
-ingestReferenceCatalog = Job('ingestReferenceCatalog.py')
-ingestReferenceCatalog.addArguments(ref_cat, output_repo)
-dax.addJob(ingestReferenceCatalog)
-dax.depends(ingestReferenceCatalog, ingestImages)
-
-makeDiscreteSkyMap = Job('makeDiscreteSkyMap.py')
-makeDiscreteSkyMap.addArguments(output_repo)
-dax.addJob(makeDiscreteSkyMap)
-# Loop over visits
-for visit in visit_list(output_repo):
-    # Loop over rafts
-    for raft in raft_list(visit):
-        processCcd = Job('processCcd.py')
-        processCcd.addArguments(output_repo, '--id', 'visit=%s' % visit,
-                                'raft=%s' % raft)
-        dax.addJob(processCcd)
-        dax.depends(processCcd, ingestReferenceCatalog)
-        dax.depends(makeDiscreteSkyMap, processCcd)
-
-# Loop over tracts
-for tract in tract_list(output_repo):
-    # Loop over patches.
-    for patch in patch_list(output_repo, tract=tract):
-
-        mergeDetections = Job('mergeDetections.py')
-        mergeDetections.addArguments(output_repo, '--id', 'patch=%s' % patch,
-                                     'tract=%s' % tract,
-                                     'filter=%s' % '^'.join(filter_list()))
-        dax.addJob(mergeDetections)
-        for filt in filter_list():
-            args = ('--id', 'filter=%s' % filt, 'patch=%s' % patch,
-                    'tract=%s' % tract)
-            makeTempExpCoadd = Job('makeCoaddTempExp.py')
-            makeTempExpCoadd.addArguments(output_repo,
-                                          '--selectId', 'filter=%s' % filt,
-                                          *args)
-            dax.addJob(makeTempExpCoadd)
-            dax.depends(makeTempExpCoadd, makeDiscreteSkyMap)
-
-            assembleCoadd = Job('assembleCoadd.py')
-            assembleCoadd.addArguments(output_repo,
-                                       '--selectId', 'filter=%s' % filt, *args)
-            dax.addJob(assembleCoadd)
-            dax.depends(assembleCoadd, makeTempExpCoadd)
-
-            detectCoaddSources = Job('detectCoaddSource.py')
-            detectCoaddSources.addArguments(output_repo, *args)
-            dax.addJob(detectCoaddSources)
-            dax.depends(detectCoaddSources, assembleCoadd)
-
-            dax.depends(mergeDetections, detectCoaddSources)
-
-        # Make a separate loop over filters for measureCoadd job
-        # since it will take place after mergeDetections has run on
-        # all filters.
-        for filt in filter_list():
-            measureCoadd = Job('measureCoadd.py')
-            measureCoadd.addArguments(output_repo, *args)
-            dax.addJob(measureCoadd)
-            dax.depends(measureCoadd, mergeDetections)
-
-# Forced photometry on data for each visit.
-for visit in visit_list(output_repo):
-    for raft in raft_list(visit):
-        for sensor in sensor_list(visit, raft):
-            forcedPhotCcd = Job('forcedPhotCcd.py')
-            forcedPhotCcd.addArguments(output_repo, '--id', 'visit=%s' % visit,
-                                       'raft=%s' % raft, 'sensor=%s' % sensor)
-
-daxfile = 'L2.dax'
-with open(daxfile, 'w') as f:
-    dax.writeXML(f)
+#job_maker = JobMaker(dax, output_repo, config_dir)
+#
+## Ingest the raw images.
+#ingestImages = job_maker.make('ingestImages', repo=input_repo,
+#                              options={'--output': output_repo})
+#
+## Ingest the reference catalog.
+#ref_cat = '/global/homes/d/descdm/dc1/DC1-imsim-dithered/dc1_reference_catalog.txt'
+#ingestReferenceCatalog = Job('ingestReferenceCatalog.py')
+#ingestReferenceCatalog.addArguments(ref_cat, output_repo)
+#dax.addJob(ingestReferenceCatalog)
+#dax.depends(ingestReferenceCatalog, ingestImages)
+#
+#makeDiscreteSkyMap = job_maker.make('makeDiscreteSkyMap')
+## Loop over visits
+#for visit in visit_list(output_repo):
+#    # Loop over rafts
+#    for raft in raft_list(visit):
+#        dataId = dict(visit=visit, raft=raft)
+#        processCcd = job_maker.make('processCcd', dataId=dataId)
+#        dax.depends(processCcd, ingestReferenceCatalog)
+#        dax.depends(makeDiscreteSkyMap, processCcd)
+#
+## Loop over tracts
+#for tract in tract_list(output_repo):
+#    # Loop over patches.
+#    for patch in patch_list(output_repo, tract=tract):
+#        dataId = dict(patch=patch, tract=tract, filter='^'.join(filter_list()))
+#        mergeDetections = job_maker.make('mergeDetections', dataId=dataId)
+#        for filt in filter_list():
+#            dataId = dict(patch=patch, tract=tract, filter=filt)
+#            options = {'--selectId': 'filter=%s' % filt}
+#            makeTempExpCoadd = job_maker.make('makeTempExpCoadd', dataId=dataId,
+#                                              options=options)
+#            dax.depends(makeTempExpCoadd, makeDiscreteSkyMap)
+#
+#            assembleCoadd = job_maker.make('assembleCoadd', dataId=datId,
+#                                           options=options)
+#            dax.depends(assembleCoadd, makeTempExpCoadd)
+#
+#            detectCoaddSources = job_maker.make('detectCoaddSources',
+#                                                dataId=dataId)
+#            dax.depends(detectCoaddSources, assembleCoadd)
+#            dax.depends(mergeDetections, detectCoaddSources)
+#
+#        # Make a separate loop over filters for measureCoadd job
+#        # since it will take place after mergeDetections has run on
+#        # all filters.
+#        for filt in filter_list():
+#            dataId = dict(patch=patch, tract=tract, filter=filt)
+#            measureCoadd = job_maker.make('measureCoadd', dataId=dataId)
+#            dax.depends(measureCoadd, mergeDetections)
+#
+## Forced photometry on data for each visit.
+#for visit in visit_list(output_repo):
+#    for raft in raft_list(visit):
+#        for sensor in sensor_list(visit, raft):
+#            dataId = dict(visit=visit, raft=raft, sensor=sensor)
+#            forcedPhotCcd = job_maker.make('forcedPhotCcd', dataId=dataId)
+#
+#daxfile = 'L2.dax'
+#with open(daxfile, 'w') as f:
+#    dax.writeXML(f)
