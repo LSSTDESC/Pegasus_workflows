@@ -1,3 +1,0 @@
-class TransformationCatalog(object):
-    pass
-
