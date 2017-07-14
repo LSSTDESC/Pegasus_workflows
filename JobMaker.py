@@ -3,14 +3,15 @@ import os
 import Pegasus.DAX3 as DAX3
 
 class JobMaker(object):
-    def __init__(self, dax, repo, config_dir, bin_dir=None, tc=None):
+    def __init__(self, dax, repo, config_dir, bin_dir=None, tc=None,
+                 clobber=False):
         self.dax = dax
         self.repo = repo
         self.config_dir = config_dir
         self.bin_dir = bin_dir
         self.tc = tc
         self.executables = set()
-        if self.tc is not None:
+        if self.tc is not None and clobber:
             try:
                 os.remove(self.tc)
             except OSError:
