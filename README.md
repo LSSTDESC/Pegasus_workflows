@@ -3,6 +3,8 @@
 ## Installation and setup
 Download [Pegasus](https://pegasus.isi.edu/) and [HTCondor](https://research.cs.wisc.edu/htcondor/)
 
+On Ubuntu 16.04 you may have to install libmysqlclient18 by dwnloading the [deb package](https://launchpad.net/ubuntu/xenial/amd64/libmysqlclient18/5.6.25-0ubuntu1)
+
 ## Generating a DAG
 If you have a daxgen.py file, like [L2_daxgen.py](https://github.com/LSSTDESC/Pegasus_workflows/blob/master/L2_daxgen.py),
 you can generate the DAG (as xml) by doing
